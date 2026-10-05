@@ -36,10 +36,11 @@ jobs:
           image=${BASH_REMATCH[2]}
           image_file="$platform-$image.tar"
           image_file=${image_file//\//_}
+          image_file=${image_file//:/__}
           docker pull --platform="$platform" "$image"
           docker save "$image" --output "$RUNNER_TEMP/$image_file"
 
-          release_tag="$commit_id"
+          release_tag="${image_file}_${commit_id:0:5}"
           if gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$release_tag" "$RUNNER_TEMP/$image_file" \
               --repo "$GITHUB_REPOSITORY" --clobber
@@ -51,43 +52,43 @@ jobs:
               --notes "$commit_message"
           fi
 
-          release_json=$(gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" --json assets)
-          download_url=$(jq -er --arg name "$image_file" \
-            '.assets[] | select(.name == $name) | .browserDownloadUrl' <<< "$release_json")
+          # release_json=$(gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" --json assets)
+          # download_url=$(jq -er --arg name "$image_file" \
+          #   '.assets[] | select(.name == $name) | .browserDownloadUrl' <<< "$release_json")
 
-          metadata_file="$RUNNER_TEMP/$commit_id.json"
-          jq -n \
-            --arg commit_id "$commit_id" \
-            --arg commit_message "$commit_message" \
-            --arg platform "$platform" \
-            --arg image "$image" \
-            --arg file_name "$image_file" \
-            --arg release_tag "$release_tag" \
-            --arg download_url "$download_url" \
-            '{commit_id: $commit_id, commit_message: $commit_message, platform: $platform, image: $image, file_name: $file_name, release_tag: $release_tag, download_url: $download_url}' \
-            > "$metadata_file"
+          # metadata_file="$RUNNER_TEMP/$commit_id.json"
+          # jq -n \
+          #   --arg commit_id "$commit_id" \
+          #   --arg commit_message "$commit_message" \
+          #   --arg platform "$platform" \
+          #   --arg image "$image" \
+          #   --arg file_name "$image_file" \
+          #   --arg release_tag "$release_tag" \
+          #   --arg download_url "$download_url" \
+          #   '{commit_id: $commit_id, commit_message: $commit_message, platform: $platform, image: $image, file_name: $file_name, release_tag: $release_tag, download_url: $download_url}' \
+          #   > "$metadata_file"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # git config user.name "github-actions[bot]"
+          # git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if git ls-remote --exit-code --heads origin d >/dev/null 2>&1; then
-            git fetch origin refs/heads/d:refs/remotes/origin/d
-            git switch --create d --track origin/d
-          else
-            git switch --create d "$commit_id"
-          fi
+          # if git ls-remote --exit-code --heads origin d >/dev/null 2>&1; then
+          #   git fetch origin refs/heads/d:refs/remotes/origin/d
+          #   git switch --create d --track origin/d
+          # else
+          #   git switch --create d "$commit_id"
+          # fi
 
-          mkdir -p releases
-          cp "$metadata_file" "releases/$commit_id.json"
-          git add -- "releases/$commit_id.json"
+          # mkdir -p releases
+          # cp "$metadata_file" "releases/$commit_id.json"
+          # git add -- "releases/$commit_id.json"
 
-          staged_files=$(git diff --cached --name-only)
-          if [[ "$staged_files" != "releases/$commit_id.json" ]]; then
-            printf 'Refusing to commit unexpected staged files:\n%s\n' "$staged_files" >&2
-            exit 1
-          fi
-          if ! git diff --cached --quiet; then
-            git commit --only -m "Publish image metadata $commit_id" -- "releases/$commit_id.json"
-          fi
+          # staged_files=$(git diff --cached --name-only)
+          # if [[ "$staged_files" != "releases/$commit_id.json" ]]; then
+          #   printf 'Refusing to commit unexpected staged files:\n%s\n' "$staged_files" >&2
+          #   exit 1
+          # fi
+          # if ! git diff --cached --quiet; then
+          #   git commit --only -m "Publish image metadata $commit_id" -- "releases/$commit_id.json"
+          # fi
 
-          git push origin HEAD:refs/heads/d
+          # git push origin HEAD:refs/heads/d
