@@ -28,9 +28,9 @@ jobs:
           commit_id=$(git rev-parse "$GITHUB_SHA")
           commit_message=$(git log -1 --format=%B "$commit_id")
 
-          Platform=${str%% *}
-          IMAGE=${str#* }
-          if [ -z "$str" ]; then
+          Platform=${commit_message%% *}
+          IMAGE=${commit_message#* }
+          if [ -z "$IMAGE" ]; then
             exit 0
           fi
           image_file="$Platform-$IMAGE.tar"
