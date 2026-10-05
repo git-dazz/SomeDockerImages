@@ -1,0 +1,59 @@
+name: Pull and publish Docker image
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  pull-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      # IMAGE: ghcr.io/openai/codex-universal2
+      BASE_COMMIT: a74e782c757f51d106fc7a4eac426d20a87b15bd
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pull image and publish tar on a commit branch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          commit_id=$(git rev-parse "$GITHUB_SHA")
+          commit_message=$(git log -1 --format=%B "$commit_id")
+
+          Platform=${str%% *}
+          IMAGE=${str#* }
+          if [ -z "$str" ]; then
+            exit 0
+          fi
+          image_file="$Platform-$IMAGE.tar"
+          image_file=${image_file//\//_}
+          docker pull --platform="$Platform" "$IMAGE"
+          docker save "$IMAGE" --output "$RUNNER_TEMP/$image_file"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin "$commit_id" >/dev/null 2>&1; then
+            git fetch origin "refs/heads/$commit_id"
+            git switch --create "$commit_id" FETCH_HEAD
+          else
+            git switch --create "$commit_id" "$BASE_COMMIT"
+          fi
+
+          mkdir -p images
+          cp "$RUNNER_TEMP/$image_file" "images/$image_file"
+          git add "images/$image_file"
+
+          if ! git diff --cached --quiet; then
+            git commit -m "$commit_message"
+          fi
+
+          git push origin "HEAD:refs/heads/$commit_id"
