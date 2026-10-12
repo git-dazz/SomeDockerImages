@@ -1,4 +1,4 @@
-name: Pull and publish Docker image
+name: 下载docker镜像
 
 on:
   push:
@@ -10,7 +10,8 @@ permissions:
   contents: write
 
 jobs:
-  pull-and-publish:
+  pull-image:
+    name: 获取镜像
     runs-on: ubuntu-latest
     steps:
       - name: 仓库代码
@@ -24,4 +25,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          echo "::group::Soft Version"
+          docker -v || echo 'no docker'
+          node -v || echo 'no node'
+          npm -v || echo 'no npm'
+          bun -v || echo 'no bun'
+          7z |grep "right"  ||  echo 'no 7z'
+          7zz |grep "right" ||  echo 'no 7zz'
+          echo "::endgroup::"
           ./ci-task
+          
