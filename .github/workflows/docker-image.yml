@@ -1,0 +1,27 @@
+name: Pull and publish Docker image
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: write
+
+jobs:
+  pull-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 仓库代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 开始任务
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ./ci-task
